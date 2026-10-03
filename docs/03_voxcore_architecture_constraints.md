@@ -31,3 +31,11 @@ This document serves as the absolute baseline for the new VoxCore architecture. 
 *   **Strict Isolation:** Developer projects must be entirely isolated. Tools and personas must be bound dynamically per WebSocket session based on the developer's API key.
 *   **Robust Stateless Memory:** To protect privacy, the agent must completely forget the user when a session truly ends. However, the architecture must retain active session state securely to seamlessly handle temporary network drops or slow internet without disrupting the user's flow.
 *   **Data Egress & Ingress (Transcript Management):** Because VoxCore does not hoard chat histories, the architecture must expose egress APIs/channels to stream conversation transcripts *back* to the developer's infrastructure for them to store. It must also expose ingress APIs allowing developers to inject prior user context the moment a session boots.
+
+## 7. Codebase Boundaries & Dependency Isolation
+*   **Three Permanent Pillars:** The repository houses three strictly independent projects: `developer_app/` (the client's custom application logic), `sdk/` (the installed external package connecting the app to VoxCore), and `core/` (the runtime orchestration service).
+*   **Zero Source-Code Coupling:** These three codebases must never share common source directories, and no codebase may import files from another via relative internal paths.
+*   **Strict Dependency Isolation:** All dependencies across these three codebases are strictly isolated.<br>
+*for example :-* Even if `sdk` and `developer_app` require the exact same third-party package, they must each install it independently in their own dedicated virtual environments. There is no shared root dependency configuration.
+*   **SDK Installation Model:** The `developer_app` must consume the `sdk` strictly as an installed external package boundary, mimicking how an external developer uses a production SDK.
+*   **Network Isolation:** To prevent monolith bleed during local development, `developer_app` and `core` must communicate exclusively via runtime network protocols (HTTP/WebSocket) over separate processes, exactly as they would in production. Localhost is a deployment location, not a bypass mechanism.
