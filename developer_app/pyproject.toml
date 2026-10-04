@@ -1,0 +1,18 @@
+[project]
+name = "developer_app"
+version = "0.1.0"
+description = "Dummy Developer Application for VoxCore VS-01"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "pydantic>=2.0.0"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend"]

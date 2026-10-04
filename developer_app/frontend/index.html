@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Health | Premium Appointment Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --danger: #ef4444;
+            --danger-hover: #dc2828;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --border: #334155;
+            --accent: #8b5cf6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Layout */
+        .app-wrapper { display: flex; width: 100%; height: 100%; }
+        .main-app { flex: 3; display: flex; flex-direction: column; padding: 40px; overflow-y: auto; position: relative; }
+        .sidebar { flex: 1; background-color: #020617; border-left: 1px solid var(--border); padding: 30px; display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(0,0,0,0.5); z-index: 10; overflow-y: auto; }
+
+        /* Glassmorphism Cards */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Views */
+        .view { display: none; animation: fadeIn 0.4s ease-out forwards; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Typography & Buttons */
+        h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 5px; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 20px; }
+        p { color: var(--text-muted); line-height: 1.6; }
+        
+        .btn { background-color: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn:hover { background-color: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        .btn-outline:hover { background: rgba(59, 130, 246, 0.1); }
+        .btn-danger { background-color: var(--danger); }
+        .btn-danger:hover { background-color: var(--danger-hover); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+
+        .btn-group { display: flex; gap: 15px; margin-top: 20px; }
+
+        /* Forms */
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-size: 0.9rem; font-weight: 500; color: var(--text-muted); margin-bottom: 8px; }
+        input, select { width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); color: white; padding: 12px 16px; border-radius: 8px; font-size: 1rem; box-sizing: border-box; transition: border-color 0.2s; }
+        input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+
+        /* Details View Grid */
+        .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .detail-item { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
+        .detail-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .detail-value { font-size: 1.1rem; font-weight: 600; }
+        
+        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; letter-spacing: 1px; }
+        .status-confirmed { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+        .status-pending { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+        .status-failed { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+
+        /* Alerts & Logs */
+        .alert { margin-top: 20px; padding: 15px; border-radius: 8px; display: none; font-weight: 500; }
+        .alert-error { background: rgba(239, 68, 68, 0.1); border-left: 4px solid var(--danger); color: #fca5a5; }
+        .alert-success { background: rgba(16, 185, 129, 0.1); border-left: 4px solid var(--success); color: #6ee7b7; }
+        .alert-loading { background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--primary); color: #93c5fd; }
+
+        #logs { background: #0f172a; color: #38bdf8; padding: 15px; border-radius: 8px; font-family: 'Consolas', monospace; height: 180px; overflow-y: auto; font-size: 0.85rem; border: 1px solid var(--border); margin-top: auto; }
+
+        /* Top Nav */
+        .top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+        .brand { display: flex; align-items: center; gap: 10px; }
+        .logo-box { width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), var(--accent)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; }
+
+        /* Sidebar specific */
+        .control-group { margin-bottom: 25px; }
+        .control-group label { color: #cbd5e1; display: block; margin-bottom: 8px; font-size: 0.9rem; font-weight: 600; }
+        .control-group select { background: #1e293b; border: 1px solid #334155; margin-bottom: 10px; }
+        .btn-test { width: 100%; background: #334155; border: 1px solid #475569; color: white; padding: 8px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
+        .btn-test:hover { background: #475569; border-color: #64748b; }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+    <!-- MAIN APPLICATION -->
+    <div class="main-app">
+        
+        <div class="top-nav">
+            <div class="brand">
+                <div class="logo-box">N</div>
+                <div>
+                    <h1 style="font-size: 1.5rem; margin:0;">Nexus Health</h1>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">Patient Portal</span>
+                </div>
+            </div>
+            <button class="btn btn-outline" onclick="navigate('home')">Home</button>
+        </div>
+
+        <!-- 1. HOME VIEW -->
+        <div id="home-view" class="view active glass-card">
+            <h2>Welcome to Nexus Health</h2>
+            <p>Please select an action below to manage your healthcare journey.</p>
+            <div class="btn-group" style="margin-top: 30px;">
+                <button class="btn" onclick="navigate('create')">Create New Appointment</button>
+                <button class="btn btn-outline" onclick="navigate('status')">Check Application Status</button>
+            </div>
+        </div>
+
+        <!-- 2. CHECK STATUS VIEW -->
+        <div id="status-view" class="view glass-card">
+            <h2>Check Appointment Status</h2>
+            <p>Enter your Appointment ID to view your details.</p>
+            
+            <div class="form-group" style="margin-top: 25px;">
+                <label>Appointment ID</label>
+                <input type="text" id="lookup-id" placeholder="e.g. APT-1A2B3C4D">
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn" onclick="fetchAppointment()">View Details</button>
+                <button class="btn btn-outline" onclick="navigate('home')">Cancel</button>
+            </div>
+            <div id="status-alert" class="alert alert-error"></div>
+        </div>
+
+        <!-- 3. CREATE APPOINTMENT VIEW -->
+        <div id="create-view" class="view glass-card">
+            <h2>Book New Appointment</h2>
+            <p>Fill out the details below to schedule your visit. Our system will automatically find the best available doctor for you.</p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                    <label>Patient Full Name</label>
+                    <input type="text" id="create-name" placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label>Department / Specialty</label>
+                    <select id="create-specialty">
+                        <option>Cardiology</option>
+                        <option>Neurology</option>
+                        <option>General Practice</option>
+                        <option>Orthopedics</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Preferred Date</label>
+                    <input type="date" id="create-date">
+                </div>
+                <div class="form-group">
+                    <label>Preferred Time</label>
+                    <input type="time" id="create-time">
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn" onclick="submitAppointment()">Confirm Booking</button>
+                <button class="btn btn-outline" onclick="navigate('home')">Cancel</button>
+            </div>
+            <div id="create-alert" class="alert alert-error"></div>
+        </div>
+
+        <!-- 4. DETAILS VIEW -->
+        <div id="details-view" class="view glass-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                <div>
+                    <h2 style="margin-bottom: 10px;">Appointment Details</h2>
+                    <div id="detail-status" class="status-badge status-confirmed">CONFIRMED</div>
+                </div>
+                <span id="detail-id" style="background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 5px; font-family: monospace;">APT-XXXX</span>
+            </div>
+            
+            <div id="details-notes" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.95rem; color: #cbd5e1; font-style: italic;">
+                System notes will appear here.
+            </div>
+
+            <div class="details-grid">
+                <div class="detail-item">
+                    <div class="detail-label">Patient Name</div>
+                    <div class="detail-value" id="detail-name">---</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Department</div>
+                    <div class="detail-value" id="detail-spec">---</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Assigned Doctor</div>
+                    <div class="detail-value" id="detail-doc" style="color: var(--accent);">---</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Location</div>
+                    <div class="detail-value" id="detail-loc">---</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Date</div>
+                    <div class="detail-value" id="detail-date">---</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Time</div>
+                    <div class="detail-value" id="detail-time">---</div>
+                </div>
+            </div>
+
+            <div class="btn-group" style="border-top: 1px solid var(--border); padding-top: 20px;">
+                <button class="btn btn-outline" onclick="navigate('home')">Back to Home</button>
+                <button class="btn btn-danger" onclick="deleteAppointment()" id="btn-delete">Cancel Appointment</button>
+            </div>
+            <div id="details-alert" class="alert alert-error"></div>
+        </div>
+
+    </div>
+
+    <!-- RIGHT SIDEBAR: TEST CONTROLS -->
+    <div class="sidebar">
+        <h3 style="margin-top: 0; color: white;">Agent Test Controls</h3>
+        <p style="font-size: 0.85rem; margin-bottom: 20px; color: #94a3b8;">Modify backend state secretly to test Agent resilience.</p>
+
+        <div class="control-group">
+            <label>1. Booking System (Network) Failure</label>
+            <select id="tc-create_sys">
+                <option value="">Normal Execution</option>
+                <option value="timeout">Network Timeout (5s)</option>
+                <option value="db_error">Database Lock Error (500)</option>
+            </select>
+            <button class="btn-test" onclick="setTestControl('create_sys')">Apply Network Failure</button>
+        </div>
+
+        <div class="control-group">
+            <label>2. Booking Business Logic Outcome</label>
+            <select id="tc-booking_outcome">
+                <option value="">Auto-Assign & Confirm</option>
+                <option value="pending">Force Status: PENDING (Manual Review)</option>
+                <option value="no_doctor">Force Status: FAILED (No Doctors)</option>
+            </select>
+            <button class="btn-test" onclick="setTestControl('booking_outcome')">Apply Business Rule</button>
+        </div>
+
+        <div class="control-group">
+            <label>3. Fetch Status Failure</label>
+            <select id="tc-read">
+                <option value="">Normal Execution</option>
+                <option value="timeout">Database Timeout (5s)</option>
+                <option value="corrupt">Data Corruption (500)</option>
+            </select>
+            <button class="btn-test" onclick="setTestControl('read')">Apply to Backend</button>
+        </div>
+
+        <div class="control-group">
+            <label>4. Delete Appointment Failure</label>
+            <select id="tc-delete">
+                <option value="">Normal Execution</option>
+                <option value="timeout">Billing Timeout (5s)</option>
+                <option value="locked">Record Locked (403)</option>
+            </select>
+            <button class="btn-test" onclick="setTestControl('delete')">Apply to Backend</button>
+        </div>
+        
+        <h4 style="margin-top: auto; color: white; margin-bottom: 10px; font-size: 0.9rem;">Frontend App Logs (PyScript)</h4>
+        <div id="logs"></div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = "http://localhost:8000";
+    let currentAppointmentId = null;
+
+    // View Navigation
+    function navigate(viewName) {
+        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+        document.getElementById(`${viewName}-view`).classList.add('active');
+        document.querySelectorAll('.alert').forEach(el => el.style.display = 'none');
+    }
+
+    function showAlert(elementId, message, type="error") {
+        const el = document.getElementById(elementId);
+        el.className = `alert alert-${type}`;
+        el.innerText = message;
+        el.style.display = "block";
+    }
+
+    // --- API CALLS ---
+    
+    async function submitAppointment() {
+        const payload = {
+            patient_name: document.getElementById('create-name').value || "Guest",
+            specialty: document.getElementById('create-specialty').value,
+            date: document.getElementById('create-date').value || "2026-10-15",
+            time: document.getElementById('create-time').value || "10:00"
+        };
+        
+        showAlert('create-alert', 'Searching for available doctors...', 'loading');
+        
+        try {
+            const res = await fetch(`${API_BASE}/api/appointments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                currentAppointmentId = data.id;
+                renderDetailsView(data);
+                navigate('details');
+            } else {
+                showAlert('create-alert', `Failed: ${data.detail}`, 'error');
+            }
+        } catch (err) {
+            showAlert('create-alert', 'Network Error connecting to backend.', 'error');
+        }
+    }
+
+    async function fetchAppointment() {
+        const appId = document.getElementById('lookup-id').value.trim();
+        if(!appId) return showAlert('status-alert', 'Please enter an ID', 'error');
+        
+        showAlert('status-alert', 'Querying database...', 'loading');
+        
+        try {
+            const res = await fetch(`${API_BASE}/api/appointments/${appId}`);
+            const data = await res.json();
+            
+            if (res.ok) {
+                currentAppointmentId = data.id;
+                renderDetailsView(data);
+                navigate('details');
+            } else {
+                showAlert('status-alert', `Failed: ${data.detail}`, 'error');
+            }
+        } catch (err) {
+            showAlert('status-alert', 'Network Error connecting to backend.', 'error');
+        }
+    }
+
+    async function deleteAppointment() {
+        if(!currentAppointmentId) return;
+        
+        showAlert('details-alert', 'Processing cancellation...', 'loading');
+        
+        try {
+            const res = await fetch(`${API_BASE}/api/appointments/${currentAppointmentId}`, {
+                method: 'DELETE'
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                showAlert('details-alert', 'Appointment successfully cancelled.', 'success');
+                setStatusBadge("CANCELLED");
+                document.getElementById('btn-delete').style.display = "none";
+            } else {
+                showAlert('details-alert', `Failed: ${data.detail}`, 'error');
+            }
+        } catch (err) {
+            showAlert('details-alert', 'Network Error connecting to backend.', 'error');
+        }
+    }
+
+    function setStatusBadge(status) {
+        const badge = document.getElementById('detail-status');
+        badge.innerText = status;
+        badge.className = "status-badge";
+        if (status === "CONFIRMED") badge.classList.add("status-confirmed");
+        else if (status === "PENDING") badge.classList.add("status-pending");
+        else badge.classList.add("status-failed");
+    }
+
+    function renderDetailsView(data) {
+        document.getElementById('detail-id').innerText = data.id;
+        document.getElementById('detail-name').innerText = data.patient_name;
+        document.getElementById('detail-spec').innerText = data.specialty;
+        document.getElementById('detail-doc').innerText = data.assigned_doctor;
+        document.getElementById('detail-loc').innerText = data.location;
+        document.getElementById('detail-date').innerText = data.date;
+        document.getElementById('detail-time').innerText = data.time;
+        document.getElementById('details-notes').innerText = `System Notes: ${data.notes}`;
+        
+        setStatusBadge(data.status);
+        
+        // Hide delete button if already failed
+        if (data.status === "FAILED" || data.status === "CANCELLED") {
+            document.getElementById('btn-delete').style.display = "none";
+        } else {
+            document.getElementById('btn-delete').style.display = "inline-flex";
+        }
+    }
+
+    // --- TEST CONTROLS ---
+    async function setTestControl(target) {
+        const mode = document.getElementById(`tc-${target}`).value;
+        try {
+            await fetch(`${API_BASE}/api/test_controls/set_failure`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: target, failure_mode: mode || null })
+            });
+            alert(`Backend state updated! Next execution will experience: ${mode || "Normal execution"}`);
+        } catch (err) {
+            alert("Failed to update backend. Is FastAPI running?");
+        }
+    }
+</script>
+
+<py-config>
+    packages = []
+</py-config>
+<script type="py" src="./main.py"></script>
+
+</body>
+</html>
